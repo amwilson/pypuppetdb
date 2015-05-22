@@ -105,7 +105,7 @@ class Report(object):
 
     """
     def __init__(self, node, hash_, start, end, received, version,
-                 format_, agent_version, transaction):
+                 format_, agent_version, transaction, status=None, environment=None):
 
         self.node = node
         self.hash_ = hash_
@@ -117,6 +117,8 @@ class Report(object):
         self.agent_version = agent_version
         self.run_time = self.end - self.start
         self.transaction = transaction
+        self.status = status
+        self.environment = environment
         self.__string = '{0}'.format(self.hash_)
 
     def __repr__(self):
@@ -243,7 +245,9 @@ class Node(object):
     """
     def __init__(self, api, name, deactivated=None, report_timestamp=None,
                  catalog_timestamp=None, facts_timestamp=None,
-                 status=None, events=None, unreported_time=None):
+                 status=None, events=None, unreported_time=None,
+                 catalog_environment=None, facts_environment=None,
+                 report_environment=None):
         self.name = name
         self.status = status
         self.events = events
@@ -265,6 +269,10 @@ class Node(object):
             self.catalog_timestamp = json_to_datetime(catalog_timestamp)
         else:
             self.catalog_timestamp = catalog_timestamp
+
+        self.catalog_environment = catalog_environment
+        self.facts_environment = facts_environment
+        self.report_environment = report_environment
 
         self.__api = api
         self.__query_scope = '["=", "certname", "{0}"]'.format(self.name)
@@ -307,9 +315,9 @@ class Node(object):
                                          query=self.__query_scope)
         return next(resource for resource in resources)
 
-    def reports(self):
+    def reports(self, order_by=None, limit=None):
         """Get all reports for this node."""
-        return self.__api.reports(self.__query_scope)
+        return self.__api.reports(self.__query_scope, order_by=order_by, limit=limit)
 
 
 class Catalog(object):

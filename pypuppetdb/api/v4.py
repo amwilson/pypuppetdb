@@ -15,8 +15,8 @@ log = logging.getLogger(__name__)
 
 
 class API(BaseAPI):
-    """The API object for version 3 of the PuppetDB API. This object contains
-    all v3 specific methods and ways of doing things.
+    """The API object for version 4 of the PuppetDB API. This object contains
+    all v4 specific methods and ways of doing things.
 
     :param \*\*kwargs: Rest of the keywoard arguments passed on to our parent\
             :class:`~pypuppetdb.api.BaseAPI`.
@@ -24,7 +24,7 @@ class API(BaseAPI):
 
     def __init__(self, *args, **kwargs):
         """Initialise the API object."""
-        super(API, self).__init__(api_version=3, **kwargs)
+        super(API, self).__init__(api_version=4, **kwargs)
         log.debug('API initialised with {0}.'.format(kwargs))
 
     def node(self, name):
@@ -66,12 +66,12 @@ class API(BaseAPI):
                 summarize_by='certname')
 
         for node in nodes:
-            node['unreported_time'] = None
+            node['unreported-time'] = None
             node['status'] = None
 
             if with_status:
                 status = [s for s in latest_events
-                          if s['subject']['title'] == node['name']]
+                          if s['subject']['title'] == node['certname']]
 
             # node status from events
             if with_status and status:
@@ -88,16 +88,16 @@ class API(BaseAPI):
                 node['events'] = None
 
             # node report age
-            if with_status and node['report_timestamp'] is not None:
+            if with_status and node['report-timestamp'] is not None:
                 try:
-                    last_report = json_to_datetime(node['report_timestamp'])
+                    last_report = json_to_datetime(node['report-timestamp'])
                     last_report = last_report.replace(tzinfo=None)
                     now = datetime.utcnow()
                     unreported_border = now-timedelta(hours=unreported)
                     if last_report < unreported_border:
                         delta = (datetime.utcnow()-last_report)
                         node['status'] = 'unreported'
-                        node['unreported_time'] = '{0}d {1}h {2}m'.format(
+                        node['unreported-time'] = '{0}d {1}h {2}m'.format(
                             delta.days,
                             int(delta.seconds/3600),
                             int((delta.seconds % 3600)/60)
@@ -105,18 +105,21 @@ class API(BaseAPI):
                 except AttributeError:
                     node['status'] = 'unreported'
 
-            if not node['report_timestamp'] and with_status:
+            if not node['report-timestamp'] and with_status:
                 node['status'] = 'unreported'
 
             yield Node(self,
-                       node['name'],
+                       name=node['certname'],
                        deactivated=node['deactivated'],
-                       report_timestamp=node['report_timestamp'],
-                       catalog_timestamp=node['catalog_timestamp'],
-                       facts_timestamp=node['facts_timestamp'],
+                       report_timestamp=node['report-timestamp'],
+                       catalog_timestamp=node['catalog-timestamp'],
+                       facts_timestamp=node['facts-timestamp'],
                        status=node['status'],
                        events=node['events'],
-                       unreported_time=node['unreported_time']
+                       unreported_time=node['unreported-time'],
+                       catalog_environment=node['catalog-environment'],
+                       facts_environment=node['facts-environment'],
+                       report_environment=node['report-environment'],
                        )
 
     def facts(self, name=None, value=None, query=None):
@@ -197,7 +200,9 @@ class API(BaseAPI):
                 report['configuration-version'],
                 report['report-format'],
                 report['puppet-version'],
-                report['transaction-uuid']
+                report['transaction-uuid'],
+                report['status'],
+                report['environment'],
                 )
 
     def events(self, query, order_by=None, limit=None):
